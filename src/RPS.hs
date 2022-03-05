@@ -33,7 +33,7 @@ import qualified PlutusTx
 import PlutusTx.Prelude hiding (Semigroup (..), unless)
 import Prelude (Eq, Semigroup (..), Show (..), String)
 
-data GameTurns = Rock | Paper | Scissors deriving (Show, Generic, FromJSON, ToJSON, ToSchema, OpenApi.ToSchema)
+data GameTurns = Rock | Paper | Scissors deriving (Show, Generic, FromJSON, ToJSON, ToSchema, OpenApi.ToSchema, Prelude.Eq)
 
 PlutusTx.unstableMakeIsData ''GameTurns
 
@@ -187,7 +187,7 @@ data FirstParams = FirstParams
     fpNonce :: BuiltinByteString,
     fpChoice :: GameTurns
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, OpenApi.ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, OpenApi.ToSchema, Prelude.Eq)
 
 win :: GameTurns -> GameTurns -> Bool
 win player1 player2 = case (player1, player2) of
@@ -199,10 +199,11 @@ win player1 player2 = case (player1, player2) of
 mapError' :: Contract w s SMContractError a -> Contract w s Text a
 mapError' = mapError (pack . show)
 
-firstGame :: FirstParams -> Contract (Last ThreadToken) s Text ()
+firstGame :: FirstParams -> Contract (Last ThreadToken) GameSchema Text ()
 firstGame FirstParams {..} = do
   pkh <- Contract.ownPaymentPubKeyHash
   tt <- mapError' getThreadToken
+  logInfo @String $ "ThreadToken minted: " ++ show tt
   let game =
         Game
           { gFirstPlayer = pkh,
@@ -249,9 +250,9 @@ data SecondParams = SecondParams
     spChoice :: GameTurns,
     spToken :: ThreadToken
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, OpenApi.ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, OpenApi.ToSchema, Prelude.Eq)
 
-secondGame :: SecondParams -> Contract w s Text ()
+secondGame :: SecondParams -> Contract (Last ThreadToken) GameSchema Text ()
 secondGame SecondParams {..} = do
   pkh <- Contract.ownPaymentPubKeyHash
   let game =
