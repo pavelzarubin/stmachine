@@ -20,7 +20,7 @@ import RPS
 import Wallet.Emulator.Wallet
 
 runTestTrace :: IO ()
-runTestTrace = runEmulatorTraceIO' def emuConf (testTrace Rock Scissors)
+runTestTrace = runEmulatorTraceIO' def emuConf (testTrace Rock Rock)
 
 emuConf :: EmulatorConfig
 emuConf =

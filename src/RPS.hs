@@ -66,7 +66,7 @@ instance PlutusTx.Prelude.Eq GameDatum where
 
 PlutusTx.unstableMakeIsData ''GameDatum
 
-data GameRedeemer = Play GameTurns | Reveal BuiltinByteString | ClaimFirst | ClaimSecond deriving (Show)
+data GameRedeemer = Play GameTurns | Reveal BuiltinByteString | ClaimFirst | ClaimSecond | ClaimBoth BuiltinByteString deriving (Show)
 
 PlutusTx.unstableMakeIsData ''GameRedeemer
 
@@ -99,11 +99,20 @@ transitionGame game st red = case (stateValue st, stateData st, red) of
           State Finish mempty
         )
   (v, GameDatum _ (Just _), ClaimSecond)
-    | lovelaceInt v == (2 * gStake game) ->
+    | lovelaceInt v == (2 * gStake game) || lovelaceInt v == (gStake game) ->
       Just
         ( Constraints.mustBeSignedBy (gSecondPlayer game)
             <> Constraints.mustValidateIn (from $ 1 + gRevealDeadline game),
           State Finish mempty
+        )
+  (v, GameDatum bs (Just t), ClaimBoth _)
+    | lovelaceInt v == (2 * gStake game) ->
+      Just
+        ( Constraints.mustBeSignedBy (gFirstPlayer game)
+            <> Constraints.mustValidateIn (to $ gRevealDeadline game),
+          State
+            (GameDatum bs (Just t))
+            (Ada.lovelaceValueOf $ gStake game)
         )
   _ -> Nothing
 
@@ -123,6 +132,17 @@ check rock paper scissors (GameDatum bs (Just c)) (Reveal nonce) _ =
             Rock -> paper
             Paper -> scissors
             Scissors -> rock
+        )
+        == bs
+check rock paper scissors (GameDatum bs (Just c)) (ClaimBoth nonce) _ =
+  traceIfFalse "bad nonce" check'
+  where
+    check' =
+      sha2_256
+        ( nonce `appendByteString` case c of
+            Rock -> rock
+            Paper -> paper
+            Scissors -> scissors
         )
         == bs
 check _ _ _ _ _ _ = True
@@ -196,6 +216,18 @@ win player1 player2 = case (player1, player2) of
   (Scissors, Paper) -> True
   _ -> False
 
+data GameResult = Win | Lose | Equal deriving (Show)
+
+win' :: GameTurns -> GameTurns -> GameResult
+win' p1 p2 =
+  if p1 == p2
+    then Equal
+    else case (p1, p2) of
+      (Rock, Scissors) -> Win
+      (Paper, Rock) -> Win
+      (Scissors, Paper) -> Win
+      _ -> Lose
+
 mapError' :: Contract w s SMContractError a -> Contract w s Text a
 mapError' = mapError (pack . show)
 
@@ -236,10 +268,16 @@ firstGame FirstParams {..} = do
       GameDatum _ Nothing -> do
         logInfo @String "second player didn't play"
         void $ mapError' $ runStep client ClaimFirst
-      GameDatum _ (Just t') | win fpChoice t' -> do
-        logInfo @String "second player played and lost"
-        void $ mapError' $ runStep client $ Reveal fpNonce
-        logInfo @String "first player won and revealed"
+      GameDatum _ (Just t') -> case win' fpChoice t' of
+        Win -> do
+          logInfo @String "second player played and lost"
+          void $ mapError' $ runStep client $ Reveal fpNonce
+          logInfo @String "first player won and revealed"
+        Equal -> do
+          logInfo @String "first and second player do same turn"
+          void $ mapError' $ runStep client $ ClaimBoth fpNonce
+          logInfo @String "players return stakes"
+        _ -> logInfo @String "second player won"
       _ -> logInfo @String "second player won"
 
 data SecondParams = SecondParams
@@ -283,7 +321,7 @@ secondGame SecondParams {..} = do
           Just _ -> do
             logInfo @String "first player didn't reveal"
             void $ mapError' $ runStep client ClaimSecond
-            logInfo @String "second player won"
+            logInfo @String "second player won, or play equal to first player"
       _ -> throwError "unexpected datum"
 
 type GameSchema = Endpoint "first" FirstParams .\/ Endpoint "second" SecondParams
