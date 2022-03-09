@@ -5,18 +5,36 @@
 
 module Clients where
 
-import Control.Monad.IO.Class
-import Data.Aeson
-import Data.Default
-import Data.Text
-import GHC.Generics
-import Ledger
-import Ledger.TimeSlot
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (def))
+import Data.Text ()
+import GHC.Generics (Generic)
+import Ledger (TxOutRef (TxOutRef, txOutRefId, txOutRefIdx))
+import Ledger.TimeSlot (slotToEndPOSIXTime)
 import Network.HTTP.Req
-import Plutus.Contract.StateMachine
-import Plutus.PAB.Webserver.Types
+  ( POST (POST),
+    ReqBodyJson (ReqBodyJson),
+    bsResponse,
+    defaultHttpConfig,
+    http,
+    port,
+    req,
+    responseStatusCode,
+    runReq,
+    (/:),
+  )
+import Plutus.Contract.StateMachine (ThreadToken (ThreadToken))
+import Plutus.PAB.Webserver.Types (ContractActivationArgs (..))
 import RPS
+  ( FirstParams (..),
+    GameTurns (Paper, Scissors),
+    SecondParams (..),
+  )
 import Wallet.Emulator.Wallet
+  ( knownWallet,
+    mockWalletPaymentPubKeyHash,
+  )
 
 data ActivateContractParams t = ActivateContractParams
   { contents :: t,
@@ -36,7 +54,7 @@ startTest = runReq defaultHttpConfig $ do
   liftIO $
     putStrLn $
       if responseStatusCode response == 200
-        then "game started" ++ (show response)
+        then "game started" ++ show response
         else "error starting"
 
 testStartInstance :: ContractActivationArgs (ActivateContractParams FirstParams)
@@ -64,7 +82,7 @@ answerTest = runReq defaultHttpConfig $ do
   liftIO $
     putStrLn $
       if responseStatusCode response == 200
-        then "game answered" ++ (show response)
+        then "game answered" ++ show response
         else "error starting"
 
 testAnswerInstance :: ContractActivationArgs (ActivateContractParams SecondParams)

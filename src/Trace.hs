@@ -5,9 +5,9 @@
 
 module Trace where
 
-import Control.Lens
-import Control.Monad.Freer.Extras as Extras
-import Data.Default
+import Control.Lens ((&), (.~))
+import Control.Monad.Freer.Extras as Extras (logInfo)
+import Data.Default (Default (def))
 import Data.Functor (void)
 import qualified Data.Map as Map
 import Data.Monoid (Last (..))
@@ -25,12 +25,12 @@ runTestTrace = runEmulatorTraceIO' def emuConf (testTrace Rock Rock)
 emuConf :: EmulatorConfig
 emuConf =
   def & initialChainState
-    .~ ( Left $
-           Map.fromList
-             [ (knownWallet 1, lovelaceValueOf 10_000_000),
-               (knownWallet 2, lovelaceValueOf 10_000_000)
-             ]
-       )
+    .~ Left
+      ( Map.fromList
+          [ (knownWallet 1, lovelaceValueOf 10_000_000),
+            (knownWallet 2, lovelaceValueOf 10_000_000)
+          ]
+      )
 
 testTrace :: GameTurns -> GameTurns -> EmulatorTrace ()
 testTrace player1 player2 = do

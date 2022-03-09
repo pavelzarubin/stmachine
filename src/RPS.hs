@@ -15,22 +15,85 @@
 
 module RPS where
 
-import Control.Monad hiding (fmap)
+import Control.Monad (Monad ((>>)), void)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Monoid (Last (..))
 import qualified Data.OpenApi as OpenApi
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import Ledger hiding (singleton)
+import Ledger
+  ( Address,
+    POSIXTime,
+    PaymentPubKeyHash,
+    ScriptContext,
+    Validator,
+    Value,
+    from,
+    scriptAddress,
+    to,
+  )
 import Ledger.Ada as Ada
+  ( Ada (getLovelace),
+    fromValue,
+    lovelaceValueOf,
+  )
 import Ledger.Constraints as Constraints
+  ( TxConstraints,
+    mustBeSignedBy,
+    mustValidateIn,
+  )
 import qualified Ledger.Typed.Scripts as Scripts
-import Ledger.Typed.Tx
+import Ledger.Typed.Tx (TypedScriptTxOut (tyTxOutData))
 import Playground.Contract (ToSchema)
 import Plutus.Contract as Contract
+  ( Contract,
+    Endpoint,
+    awaitTime,
+    endpoint,
+    logInfo,
+    mapError,
+    ownPaymentPubKeyHash,
+    selectList,
+    tell,
+    throwError,
+    waitNSlots,
+    type (.\/),
+  )
 import Plutus.Contract.StateMachine
+  ( OnChainState (ocsTxOut),
+    SMContractError,
+    State (..),
+    StateMachine (..),
+    StateMachineClient,
+    StateMachineInstance (StateMachineInstance),
+    ThreadToken,
+    Void,
+    getOnChainState,
+    getThreadToken,
+    mkStateMachineClient,
+    mkValidator,
+    runInitialise,
+    runStep,
+  )
 import qualified PlutusTx
-import PlutusTx.Prelude hiding (Semigroup (..), unless)
+import PlutusTx.Prelude
+  ( AdditiveSemigroup ((+)),
+    Bool (..),
+    BuiltinByteString,
+    Eq (..),
+    Integer,
+    Maybe (..),
+    Monoid (mempty),
+    MultiplicativeSemigroup ((*)),
+    appendByteString,
+    sha2_256,
+    traceIfFalse,
+    ($),
+    (&&),
+    (++),
+    (.),
+    (||),
+  )
 import Prelude (Eq, Semigroup (..), Show (..), String)
 
 data GameTurns = Rock | Paper | Scissors deriving (Show, Generic, FromJSON, ToJSON, ToSchema, OpenApi.ToSchema, Prelude.Eq)
@@ -99,7 +162,7 @@ transitionGame game st red = case (stateValue st, stateData st, red) of
           State Finish mempty
         )
   (v, GameDatum _ (Just _), ClaimSecond)
-    | lovelaceInt v == (2 * gStake game) || lovelaceInt v == (gStake game) ->
+    | lovelaceInt v == (2 * gStake game) || lovelaceInt v == gStake game ->
       Just
         ( Constraints.mustBeSignedBy (gSecondPlayer game)
             <> Constraints.mustValidateIn (from $ 1 + gRevealDeadline game),
