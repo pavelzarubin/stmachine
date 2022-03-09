@@ -1,6 +1,11 @@
 module Main where
 
 import Spec.Trace
+  ( gameTests,
+    testGameNotFound,
+    testSecondPlayerNotPlayed,
+    tests,
+  )
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()

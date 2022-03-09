@@ -35,7 +35,6 @@ import Plutus.Trace
     callEndpoint,
     initialChainState,
     observableState,
-    runEmulatorTraceIO',
     throwError,
     waitNSlots,
   )

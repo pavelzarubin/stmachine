@@ -12,12 +12,49 @@ import Data.Functor (void)
 import qualified Data.Map as Map
 import Data.Monoid (Last (..))
 import Data.Text (Text)
-import Ledger.Ada
-import Ledger.TimeSlot
-import Plutus.Contract.StateMachine
+import Ledger.Ada (lovelaceValueOf)
+import Ledger.TimeSlot (slotToEndPOSIXTime)
+import Plutus.Contract.StateMachine (ThreadToken)
 import Plutus.Trace
+  ( ContractHandle,
+    EmulatorConfig,
+    EmulatorRuntimeError (GenericError),
+    EmulatorTrace,
+    activateContractWallet,
+    callEndpoint,
+    initialChainState,
+    observableState,
+    runEmulatorTraceIO',
+    throwError,
+    waitNSlots,
+  )
 import RPS
+  ( FirstParams
+      ( FirstParams,
+        fpChoice,
+        fpNonce,
+        fpPlayDeadline,
+        fpRevealDeadline,
+        fpSecond,
+        fpStake
+      ),
+    GameSchema,
+    GameTurns (Rock),
+    SecondParams
+      ( SecondParams,
+        spChoice,
+        spFirst,
+        spPlayDeadline,
+        spRevealDeadline,
+        spStake,
+        spToken
+      ),
+    endpoints,
+  )
 import Wallet.Emulator.Wallet
+  ( knownWallet,
+    mockWalletPaymentPubKeyHash,
+  )
 
 runTestTrace :: IO ()
 runTestTrace = runEmulatorTraceIO' def emuConf (testTrace Rock Rock)
