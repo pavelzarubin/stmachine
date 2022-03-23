@@ -1,8 +1,9 @@
 packages: stmachine.cabal
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus-apps.git
-  tag: 30ce3b2b2c8f3c118ae1031a8c735140ec07f4b4
+  tag: 4c60896dff0c31a98395ba6e6791433cd61a25e3
   subdir:
     plutus-contract
     quickcheck-dynamic
@@ -41,7 +42,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: cc72a56eafb02333c96f662581b57504f8f8992f
+  tag: 4127e9cd6e889824d724c30eae55033cb50cbf3e
   subdir:
     plutus-core
     plutus-ledger-api
@@ -78,7 +79,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-wallet
-  tag: a5085acbd2670c24251cf8d76a4e83c77a2679ba
+  tag: cf1bac841a20e621656994e4539338446af68a7f
   subdir:
     lib/cli
     lib/core
