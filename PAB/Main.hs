@@ -48,7 +48,7 @@ instance Builtin.HasDefinitions RPSContracts where
 
 handlers :: SimulatorEffectHandlers (Builtin RPSContracts)
 handlers =
-  Simulator.mkSimulatorHandlers def def $
+  Simulator.mkSimulatorHandlers def $
     interpret (contractHandler Builtin.handleBuiltin)
 
 waitForLast :: FromJSON a => ContractInstanceId -> Simulator.Simulation t a
